@@ -28,6 +28,39 @@ jobs:
             "https://${CPANEL_HOST}:2083/execute/Fileman/get_file_information?dir=/&file=." \
             || { echo "Não foi possível conectar em ${CPANEL_HOST}:2083 — verifique host, firewall ou se a API está habilitada."; exit 1; }
 
+          uapi() {
+            # Chama a UAPI do cPanel e falha se status != 1, mesmo com HTTP 200
+            # (a UAPI pode responder 200 com um erro lógico no corpo JSON).
+            local resposta codigo corpo status
+            resposta=$(curl -s -S -w "\n%{http_code}" \
+              --connect-timeout 10 --max-time 30 \
+              -H "Authorization: cpanel ${CPANEL_USER}:${CPANEL_API_TOKEN}" \
+              "$@")
+            codigo=$(echo "$resposta" | tail -n1)
+            corpo=$(echo "$resposta" | sed '$d')
+            status=$(echo "$corpo" | jq -r '.status // empty')
+
+            if [ "$codigo" != "200" ] || [ "$status" != "1" ]; then
+              echo "$corpo"
+              return 1
+            fi
+            return 0
+          }
+
+          # Cria as pastas de destino (mkdir não é recursivo, então cria nível a nível).
+          git ls-files public_html | sed "s|^public_html|${DESTINO_BASE}|" | xargs -n1 dirname | sort -u | while read -r caminho; do
+            IFS='/' read -ra partes <<< "$caminho"
+            acumulado=""
+            for parte in "${partes[@]}"; do
+              pai="$acumulado"
+              acumulado="${acumulado:+$acumulado/}$parte"
+              echo "Garantindo pasta: $acumulado"
+              uapi --data-urlencode "path=/${pai}" --data-urlencode "name=${parte}" \
+                "https://${CPANEL_HOST}:2083/execute/Fileman/mkdir" \
+                | grep -qi "already exists" && true || true
+            done
+          done
+
           git ls-files public_html | while read -r arquivo; do
             destino_rel="${DESTINO_BASE}/${arquivo#public_html/}"
             dir=$(dirname "$destino_rel")
@@ -35,20 +68,11 @@ jobs:
 
             echo "Publicando: $destino_rel"
 
-            resposta=$(curl -s -S -w "\n%{http_code}" \
-              --connect-timeout 10 --max-time 30 \
-              -H "Authorization: cpanel ${CPANEL_USER}:${CPANEL_API_TOKEN}" \
-              --data-urlencode "dir=${dir}" \
-              --data-urlencode "file=${base}" \
-              --data-urlencode "content@${arquivo}" \
-              "https://${CPANEL_HOST}:2083/execute/Fileman/save_file_content")
-
-            codigo=$(echo "$resposta" | tail -n1)
-            corpo=$(echo "$resposta" | sed '$d')
-
-            if [ "$codigo" != "200" ]; then
-              echo "Falha ao publicar $destino_rel (HTTP $codigo)"
-              echo "$corpo"
+            if ! uapi --data-urlencode "dir=/${dir}" \
+                 --data-urlencode "file=${base}" \
+                 --data-urlencode "content@${arquivo}" \
+                 "https://${CPANEL_HOST}:2083/execute/Fileman/save_file_content"; then
+              echo "Falha ao publicar $destino_rel"
               exit 1
             fi
           done
