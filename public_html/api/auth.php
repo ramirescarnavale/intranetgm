@@ -57,3 +57,17 @@ function auth_papel_logado(): ?string
     $nome = auth_usuario_logado();
     return $usuarios[$nome]['papel'] ?? null;
 }
+
+function auth_verificar_senha(string $senha, string $hashArmazenado): bool
+{
+    // Formato "pbkdf2:iterações:saltHex:hashHex", gerado localmente com
+    // gerar-hash-senha.js — evita depender de bcrypt/PHP CLI na máquina de quem cadastra a senha.
+    $partes = explode(':', $hashArmazenado);
+    if (count($partes) !== 4 || $partes[0] !== 'pbkdf2') {
+        return false;
+    }
+    [, $iteracoes, $saltHex, $hashHex] = $partes;
+    $salt = hex2bin($saltHex);
+    $calculado = hash_pbkdf2('sha256', $senha, $salt, (int)$iteracoes, 32, true);
+    return hash_equals($hashHex, bin2hex($calculado));
+}

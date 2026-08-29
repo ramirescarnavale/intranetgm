@@ -21,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $senha = (string)($dados['senha'] ?? '');
     $usuarios = auth_carregar_usuarios()['usuarios'] ?? [];
 
-    if (!isset($usuarios[$nome]) || !password_verify($senha, $usuarios[$nome]['senha_hash'])) {
+    if (!isset($usuarios[$nome]) || !auth_verificar_senha($senha, $usuarios[$nome]['senha_hash'])) {
         http_response_code(401);
         echo json_encode(['erro' => 'Usuário ou senha inválidos.']);
         exit;
