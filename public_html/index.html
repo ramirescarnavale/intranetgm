@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Geovanna Mizuguti Advocacia Previdenciária</title>
+<style>
+  :root {
+    --azul-escuro: #1c2c4c;
+    --azul: #2d4373;
+    --dourado: #b08d57;
+    --cinza-claro: #f4f5f7;
+    --cinza-borda: #dfe2e8;
+    --texto: #22272e;
+    --verde: #2e7d4f;
+    --vermelho: #b03030;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Segoe UI', Arial, sans-serif; background: var(--cinza-claro); color: var(--texto); }
+
+  /* ---------- Tela de login ---------- */
+  #tela-login { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--azul-escuro), var(--azul)); }
+  #tela-login .card { background: #fff; padding: 40px; border-radius: 10px; width: 320px; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
+  #tela-login h1 { font-size: 18px; text-align: center; margin-bottom: 24px; color: var(--azul-escuro); }
+  #tela-login input { width: 100%; padding: 10px; margin-bottom: 12px; border: 1px solid var(--cinza-borda); border-radius: 6px; font-size: 14px; }
+  #tela-login button { width: 100%; padding: 10px; background: var(--azul-escuro); color: #fff; border: none; border-radius: 6px; font-size: 14px; cursor: pointer; }
+  #tela-login button:hover { background: var(--azul); }
+  #erro-login { color: var(--vermelho); font-size: 13px; margin-bottom: 10px; min-height: 16px; }
+
+  /* ---------- Layout principal ---------- */
+  #app { display: none; min-height: 100vh; }
+  #app.ativo { display: flex; }
+  #sidebar { width: 240px; background: var(--azul-escuro); color: #fff; flex-shrink: 0; padding: 20px 0; }
+  #sidebar h2 { font-size: 15px; padding: 0 20px 16px; border-bottom: 1px solid rgba(255,255,255,.15); margin-bottom: 10px; }
+  .nav-group-header { padding: 10px 20px; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--dourado); cursor: pointer; user-select: none; }
+  .nav-item { padding: 10px 24px; cursor: pointer; font-size: 14px; }
+  .nav-item:hover { background: rgba(255,255,255,.08); }
+  .nav-item.active { background: var(--azul); border-left: 3px solid var(--dourado); }
+  #sair { margin: 20px; padding: 8px; background: transparent; border: 1px solid rgba(255,255,255,.3); color: #fff; border-radius: 6px; cursor: pointer; width: calc(100% - 40px); }
+
+  #conteudo { flex: 1; padding: 30px; overflow-y: auto; }
+  .section { display: none; }
+  .section.ativa { display: block; }
+  .section h2 { color: var(--azul-escuro); margin-top: 0; }
+
+  .tab-bar { display: flex; gap: 4px; border-bottom: 1px solid var(--cinza-borda); margin-bottom: 20px; }
+  .tab-btn { padding: 8px 16px; border: none; background: transparent; cursor: pointer; font-size: 14px; border-bottom: 2px solid transparent; }
+  .tab-btn.active { border-bottom-color: var(--azul-escuro); font-weight: 600; color: var(--azul-escuro); }
+  .tab-btn.inactive { color: #667; }
+
+  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--cinza-borda); font-size: 13px; }
+  th { background: #eef0f4; color: var(--azul-escuro); }
+  tr:last-child td { border-bottom: none; }
+  .acoes button { margin-right: 6px; padding: 4px 10px; font-size: 12px; border: none; border-radius: 4px; cursor: pointer; }
+  .btn-editar { background: var(--azul); color: #fff; }
+  .btn-excluir { background: var(--vermelho); color: #fff; }
+
+  .barra-topo { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .btn-principal { background: var(--azul-escuro); color: #fff; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+  .btn-principal:hover { background: var(--azul); }
+  input[type=text], input[type=search] { padding: 8px; border: 1px solid var(--cinza-borda); border-radius: 6px; font-size: 13px; }
+
+  /* ---------- Toggle de botões (em vez de select) ---------- */
+  .toggle-grupo { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .toggle-btn { padding: 6px 12px; border: 1px solid var(--cinza-borda); background: #fff; border-radius: 20px; font-size: 12px; cursor: pointer; }
+  .toggle-btn.active { background: var(--azul-escuro); color: #fff; border-color: var(--azul-escuro); }
+
+  /* ---------- Modal ---------- */
+  .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); align-items: center; justify-content: center; z-index: 100; }
+  .overlay.ativo { display: flex; }
+  .modal-card { background: #fff; border-radius: 10px; padding: 24px; width: 480px; max-width: 90vw; max-height: 85vh; overflow-y: auto; }
+  .modal-card h3 { margin-top: 0; color: var(--azul-escuro); }
+  .campo { margin-bottom: 14px; }
+  .campo label { display: block; font-size: 12px; color: #556; margin-bottom: 4px; }
+  .campo input, .campo textarea, .campo select { width: 100%; padding: 8px; border: 1px solid var(--cinza-borda); border-radius: 6px; font-size: 13px; }
+  .modal-acoes { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+  .btn-cancelar { background: #eee; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; }
+
+  /* ---------- Lançamento em lote ---------- */
+  #lote-financeiro-tabela input, #lote-financeiro-tabela select { width: 100%; padding: 4px; font-size: 12px; }
+  .lote-acoes { margin-top: 10px; display: flex; gap: 8px; }
+</style>
+</head>
+<body>
+
+<!-- ================= LOGIN ================= -->
+<div id="tela-login">
+  <div class="card">
+    <h1>Geovanna Mizuguti<br>Advocacia Previdenciária</h1>
+    <div id="erro-login"></div>
+    <input type="text" id="login-usuario" placeholder="Usuário" autocomplete="username">
+    <input type="password" id="login-senha" placeholder="Senha" autocomplete="current-password">
+    <button onclick="fazerLogin()">Entrar</button>
+  </div>
+</div>
+
+<!-- ================= APP ================= -->
+<div id="app">
+  <div id="sidebar">
+    <h2>GM Previdenciário</h2>
+
+    <div class="nav-group-header">Atendimento</div>
+    <div class="nav-item" data-secao="clientes" onclick="nav('clientes')">Clientes &amp; Processos</div>
+
+    <div class="nav-group-header">Financeiro</div>
+    <div class="nav-item" data-secao="financeiro" onclick="nav('financeiro')">Financeiro</div>
+
+    <div class="nav-group-header">Gestão</div>
+    <div class="nav-item" data-secao="tarefas" onclick="nav('tarefas')">Tarefas &amp; CRM</div>
+
+    <button id="sair" onclick="fazerLogout()">Sair</button>
+  </div>
+
+  <div id="conteudo">
+
+    <!-- ---------- SEÇÃO CLIENTES ---------- -->
+    <div class="section" id="section-clientes">
+      <h2>Clientes &amp; Processos Previdenciários</h2>
+      <div class="barra-topo">
+        <input type="search" id="busca-clientes" placeholder="Buscar por nome ou CPF..." oninput="carregarClientes()">
+        <button class="btn-principal" onclick="abrirModalCliente()">+ Novo cliente</button>
+      </div>
+      <table>
+        <thead><tr><th>Nome</th><th>CPF</th><th>Benefício</th><th>Status</th><th>Ações</th></tr></thead>
+        <tbody id="tabela-clientes"></tbody>
+      </table>
+    </div>
+
+    <!-- ---------- SEÇÃO FINANCEIRO ---------- -->
+    <div class="section" id="section-financeiro">
+      <h2>Financeiro</h2>
+      <div class="tab-bar" id="abas-financeiro">
+        <button class="tab-btn" onclick="financeiroTrocarAba('lancamentos')">Lançamentos</button>
+        <button class="tab-btn" onclick="financeiroTrocarAba('lote')">Lançamento em lote</button>
+      </div>
+
+      <div id="financeiro-aba-lancamentos">
+        <div class="barra-topo">
+          <span></span>
+          <button class="btn-principal" onclick="abrirModalFinanceiro()">+ Novo lançamento</button>
+        </div>
+        <table>
+          <thead><tr><th>Descrição</th><th>Tipo</th><th>Valor</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody id="tabela-financeiro"></tbody>
+        </table>
+      </div>
+
+      <div id="financeiro-aba-lote" style="display:none;">
+        <table>
+          <thead><tr><th>Descrição</th><th>Tipo</th><th>Valor</th><th></th></tr></thead>
+          <tbody id="lote-financeiro-tabela"></tbody>
+        </table>
+        <div class="lote-acoes">
+          <button class="btn-principal" onclick="loteAdicionarLinha()">+ Linha</button>
+          <button class="btn-principal" onclick="loteSalvarTudo()">Salvar tudo</button>
+          <button class="btn-cancelar" onclick="loteLimpar()">Limpar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ---------- SEÇÃO TAREFAS/CRM ---------- -->
+    <div class="section" id="section-tarefas">
+      <h2>Tarefas &amp; CRM</h2>
+      <div class="tab-bar" id="abas-tarefas">
+        <button class="tab-btn" onclick="tarefasTrocarAba('tarefas')">Tarefas</button>
+        <button class="tab-btn" onclick="tarefasTrocarAba('crm')">CRM Comercial</button>
+      </div>
+
+      <div id="tarefas-aba-tarefas">
+        <div class="barra-topo">
+          <span></span>
+          <button class="btn-principal" onclick="abrirModalTarefa()">+ Nova tarefa</button>
+        </div>
+        <table>
+          <thead><tr><th>Título</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody id="tabela-tarefas"></tbody>
+        </table>
+      </div>
+
+      <div id="tarefas-aba-crm" style="display:none;">
+        <div class="barra-topo">
+          <span></span>
+          <button class="btn-principal" onclick="abrirModalLead()">+ Novo lead</button>
+        </div>
+        <table>
+          <thead><tr><th>Nome</th><th>Etapa</th><th>Ações</th></tr></thead>
+          <tbody id="tabela-leads"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ================= MODAL CLIENTE ================= -->
+<div class="overlay" id="modal-cliente">
+  <div class="modal-card">
+    <h3 id="modal-cliente-titulo">Novo cliente</h3>
+    <input type="hidden" id="cliente-id">
+    <div class="campo"><label>Nome</label><input type="text" id="cliente-nome"></div>
+    <div class="campo"><label>CPF</label><input type="text" id="cliente-cpf"></div>
+    <div class="campo"><label>Tipo de benefício</label>
+      <div class="toggle-grupo" id="toggle-beneficio"></div>
+    </div>
+    <div class="campo"><label>Status do processo</label>
+      <div class="toggle-grupo" id="toggle-status-processo"></div>
+    </div>
+    <div class="campo"><label>Observações</label><textarea id="cliente-obs" rows="3"></textarea></div>
+    <div class="modal-acoes">
+      <button class="btn-cancelar" onclick="fecharModal('modal-cliente')">Cancelar</button>
+      <button class="btn-principal" onclick="salvarCliente()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODAL FINANCEIRO ================= -->
+<div class="overlay" id="modal-financeiro">
+  <div class="modal-card">
+    <h3 id="modal-financeiro-titulo">Novo lançamento</h3>
+    <input type="hidden" id="financeiro-id">
+    <div class="campo"><label>Descrição</label><input type="text" id="financeiro-descricao"></div>
+    <div class="campo"><label>Tipo</label>
+      <div class="toggle-grupo" id="toggle-tipo-financeiro"></div>
+    </div>
+    <div class="campo"><label>Valor (R$)</label><input type="text" id="financeiro-valor"></div>
+    <div class="campo"><label>Status</label>
+      <div class="toggle-grupo" id="toggle-status-financeiro"></div>
+    </div>
+    <div class="modal-acoes">
+      <button class="btn-cancelar" onclick="fecharModal('modal-financeiro')">Cancelar</button>
+      <button class="btn-principal" onclick="salvarFinanceiro()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODAL TAREFA ================= -->
+<div class="overlay" id="modal-tarefa">
+  <div class="modal-card">
+    <h3 id="modal-tarefa-titulo">Nova tarefa</h3>
+    <input type="hidden" id="tarefa-id">
+    <div class="campo"><label>Título</label><input type="text" id="tarefa-titulo"></div>
+    <div class="campo"><label>Status</label>
+      <div class="toggle-grupo" id="toggle-status-tarefa"></div>
+    </div>
+    <div class="modal-acoes">
+      <button class="btn-cancelar" onclick="fecharModal('modal-tarefa')">Cancelar</button>
+      <button class="btn-principal" onclick="salvarTarefa()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODAL LEAD ================= -->
+<div class="overlay" id="modal-lead">
+  <div class="modal-card">
+    <h3 id="modal-lead-titulo">Novo lead</h3>
+    <input type="hidden" id="lead-id">
+    <div class="campo"><label>Nome</label><input type="text" id="lead-nome"></div>
+    <div class="campo"><label>Etapa</label>
+      <div class="toggle-grupo" id="toggle-etapa-lead"></div>
+    </div>
+    <div class="modal-acoes">
+      <button class="btn-cancelar" onclick="fecharModal('modal-lead')">Cancelar</button>
+      <button class="btn-principal" onclick="salvarLead()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ======================================================================
+// Estado global e dispatcher central
+// ======================================================================
+let ESTADO = {
+  usuario: null,
+  clientes: { registros: [], tipos_beneficio: [], status_processo: [] },
+  financeiro: { registros: [], tipos: [], status: [] },
+  tarefasCrm: { tarefas: [], leads: [], status_tarefa: [], etapas_crm: [] },
+  loteFinanceiro: [],
+};
+
+async function api(caminho, opcoes) {
+  const resp = await fetch('api/' + caminho, opcoes);
+  const dados = await resp.json().catch(() => ({}));
+  if (!resp.ok) throw new Error(dados.erro || 'Erro na requisição.');
+  return dados;
+}
+
+// ---------- Login ----------
+async function fazerLogin() {
+  const usuario = document.getElementById('login-usuario').value.trim();
+  const senha = document.getElementById('login-senha').value;
+  document.getElementById('erro-login').textContent = '';
+  try {
+    const dados = await api('login.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ usuario, senha }),
+    });
+    ESTADO.usuario = dados.usuario;
+    iniciarApp();
+  } catch (e) {
+    document.getElementById('erro-login').textContent = e.message;
+  }
+}
+
+async function fazerLogout() {
+  await api('login.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'logout' }),
+  });
+  location.reload();
+}
+
+async function verificarSessao() {
+  try {
+    const dados = await api('login.php');
+    if (dados.usuario) {
+      ESTADO.usuario = dados.usuario;
+      iniciarApp();
+    }
+  } catch (e) { /* segue na tela de login */ }
+}
+
+// ---------- Inicialização do app (checa permissões por usuário aqui) ----------
+function iniciarApp() {
+  document.getElementById('tela-login').style.display = 'none';
+  document.getElementById('app').classList.add('ativo');
+  // Exemplo de checagem de visibilidade por usuário (expandir conforme a equipe crescer):
+  // if (ESTADO.usuario !== 'Geovanna') document.querySelector('[data-secao="financeiro"]').style.display = 'none';
+  nav('clientes');
+}
+
+// ---------- Navegação ----------
+function nav(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('ativa'));
+  document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+  document.getElementById('section-' + id).classList.add('ativa');
+  document.querySelector('[data-secao="' + id + '"]').classList.add('active');
+
+  if (id === 'clientes') carregarClientes();
+  if (id === 'financeiro') carregarFinanceiro();
+  if (id === 'tarefas') carregarTarefasCrm();
+}
+
+// ---------- Abas genéricas ----------
+function trocarAbaGenerica(grupoId, aba, mapaPaineis, botoesOrdem) {
+  const botoes = document.querySelectorAll('#' + grupoId + ' .tab-btn');
+  botoes.forEach((b, i) => {
+    b.classList.toggle('active', botoesOrdem[i] === aba);
+    b.classList.toggle('inactive', botoesOrdem[i] !== aba);
+  });
+  Object.keys(mapaPaineis).forEach(k => {
+    document.getElementById(mapaPaineis[k]).style.display = (k === aba) ? '' : 'none';
+  });
+}
+
+function financeiroTrocarAba(aba) {
+  trocarAbaGenerica('abas-financeiro', aba,
+    { lancamentos: 'financeiro-aba-lancamentos', lote: 'financeiro-aba-lote' },
+    ['lancamentos', 'lote']);
+}
+
+function tarefasTrocarAba(aba) {
+  trocarAbaGenerica('abas-tarefas', aba,
+    { tarefas: 'tarefas-aba-tarefas', crm: 'tarefas-aba-crm' },
+    ['tarefas', 'crm']);
+}
+
+// ---------- Toggle de botões ----------
+function montarToggle(containerId, opcoes, valorAtual, inputId) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  opcoes.forEach(op => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'toggle-btn' + (op === valorAtual ? ' active' : '');
+    btn.textContent = op;
+    btn.dataset.valor = op;
+    btn.onclick = () => {
+      container.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      container.dataset.selecionado = op;
+    };
+    container.appendChild(btn);
+  });
+  container.dataset.selecionado = valorAtual || '';
+}
+
+function valorToggle(containerId) {
+  return document.getElementById(containerId).dataset.selecionado || '';
+}
+
+// ---------- Modal genérico ----------
+function abrirModal(id) { document.getElementById(id).classList.add('ativo'); }
+function fecharModal(id) { document.getElementById(id).classList.remove('ativo'); }
+
+// ======================================================================
+// CLIENTES
+// ======================================================================
+async function carregarClientes() {
+  const busca = document.getElementById('busca-clientes').value;
+  const dados = await api('clientes.php?busca=' + encodeURIComponent(busca));
+  ESTADO.clientes = dados;
+  const tbody = document.getElementById('tabela-clientes');
+  tbody.innerHTML = dados.registros.map(c => `
+    <tr>
+      <td>${escapeHtml(c.nome)}</td>
+      <td>${escapeHtml(c.cpf || '')}</td>
+      <td>${escapeHtml(c.tipo_beneficio || '')}</td>
+      <td>${escapeHtml(c.status || '')}</td>
+      <td class="acoes">
+        <button class="btn-editar" onclick="abrirModalCliente(${c.id})">Editar</button>
+        <button class="btn-excluir" onclick="excluirCliente(${c.id})">Excluir</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function abrirModalCliente(id) {
+  const reg = id ? ESTADO.clientes.registros.find(c => c.id === id) : null;
+  document.getElementById('modal-cliente-titulo').textContent = reg ? 'Editar cliente' : 'Novo cliente';
+  document.getElementById('cliente-id').value = reg ? reg.id : '';
+  document.getElementById('cliente-nome').value = reg ? reg.nome : '';
+  document.getElementById('cliente-cpf').value = reg ? (reg.cpf || '') : '';
+  document.getElementById('cliente-obs').value = reg ? (reg.observacoes || '') : '';
+  montarToggle('toggle-beneficio', ESTADO.clientes.tipos_beneficio, reg ? reg.tipo_beneficio : '');
+  montarToggle('toggle-status-processo', ESTADO.clientes.status_processo, reg ? reg.status : '');
+  abrirModal('modal-cliente');
+}
+
+async function salvarCliente() {
+  const registro = {
+    id: document.getElementById('cliente-id').value || null,
+    nome: document.getElementById('cliente-nome').value.trim(),
+    cpf: document.getElementById('cliente-cpf').value.trim(),
+    tipo_beneficio: valorToggle('toggle-beneficio'),
+    status: valorToggle('toggle-status-processo'),
+    observacoes: document.getElementById('cliente-obs').value.trim(),
+  };
+  try {
+    await api('clientes.php', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'salvar', registro }),
+    });
+    fecharModal('modal-cliente');
+    carregarClientes();
+  } catch (e) { alert(e.message); }
+}
+
+async function excluirCliente(id) {
+  if (!confirm('Excluir este cliente?')) return;
+  await api('clientes.php', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'excluir', id }),
+  });
+  carregarClientes();
+}
+
+// ======================================================================
+// FINANCEIRO
+// ======================================================================
+async function carregarFinanceiro() {
+  const dados = await api('financeiro.php');
+  ESTADO.financeiro = dados;
+  const tbody = document.getElementById('tabela-financeiro');
+  tbody.innerHTML = dados.registros.map(r => `
+    <tr>
+      <td>${escapeHtml(r.descricao)}</td>
+      <td>${escapeHtml(r.tipo || '')}</td>
+      <td>R$ ${Number(r.valor).toFixed(2)}</td>
+      <td>${escapeHtml(r.status || '')}</td>
+      <td class="acoes">
+        <button class="btn-editar" onclick="abrirModalFinanceiro(${r.id})">Editar</button>
+        <button class="btn-excluir" onclick="excluirFinanceiro(${r.id})">Excluir</button>
+      </td>
+    </tr>
+  `).join('');
+  financeiroTrocarAba('lancamentos');
+}
+
+function abrirModalFinanceiro(id) {
+  const reg = id ? ESTADO.financeiro.registros.find(r => r.id === id) : null;
+  document.getElementById('modal-financeiro-titulo').textContent = reg ? 'Editar lançamento' : 'Novo lançamento';
+  document.getElementById('financeiro-id').value = reg ? reg.id : '';
+  document.getElementById('financeiro-descricao').value = reg ? reg.descricao : '';
+  document.getElementById('financeiro-valor').value = reg ? reg.valor : '';
+  montarToggle('toggle-tipo-financeiro', ESTADO.financeiro.tipos, reg ? reg.tipo : '');
+  montarToggle('toggle-status-financeiro', ESTADO.financeiro.status, reg ? reg.status : 'Pendente');
+  abrirModal('modal-financeiro');
+}
+
+async function salvarFinanceiro() {
+  const registro = {
+    id: document.getElementById('financeiro-id').value || null,
+    descricao: document.getElementById('financeiro-descricao').value.trim(),
+    valor: parseFloat(document.getElementById('financeiro-valor').value.replace(',', '.')) || 0,
+    tipo: valorToggle('toggle-tipo-financeiro'),
+    status: valorToggle('toggle-status-financeiro'),
+  };
+  try {
+    await api('financeiro.php', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'salvar', registro }),
+    });
+    fecharModal('modal-financeiro');
+    carregarFinanceiro();
+  } catch (e) { alert(e.message); }
+}
+
+async function excluirFinanceiro(id) {
+  if (!confirm('Excluir este lançamento?')) return;
+  await api('financeiro.php', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'excluir', id }),
+  });
+  carregarFinanceiro();
+}
+
+// ---------- Lançamento em lote ----------
+function loteAdicionarLinha() {
+  const tbody = document.getElementById('lote-financeiro-tabela');
+  const opcoesTipo = ESTADO.financeiro.tipos.map(t => `<option value="${t}">${t}</option>`).join('');
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td><input type="text" class="lote-descricao"></td>
+    <td><select class="lote-tipo">${opcoesTipo}</select></td>
+    <td><input type="text" class="lote-valor"></td>
+    <td><button class="btn-excluir" onclick="this.closest('tr').remove()">x</button></td>
+  `;
+  tbody.appendChild(tr);
+}
+
+async function loteSalvarTudo() {
+  const linhas = document.querySelectorAll('#lote-financeiro-tabela tr');
+  const registros = Array.from(linhas).map(tr => ({
+    descricao: tr.querySelector('.lote-descricao').value.trim(),
+    tipo: tr.querySelector('.lote-tipo').value,
+    valor: parseFloat(tr.querySelector('.lote-valor').value.replace(',', '.')) || 0,
+  }));
+  await api('financeiro.php', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'criar_lote', registros }),
+  });
+  loteLimpar();
+  carregarFinanceiro();
+}
+
+function loteLimpar() {
+  document.getElementById('lote-financeiro-tabela').innerHTML = '';
+}
+
+// ======================================================================
+// TAREFAS & CRM
+// ======================================================================
+async function carregarTarefasCrm() {
+  const dados = await api('tarefas.php');
+  ESTADO.tarefasCrm = dados;
+
+  document.getElementById('tabela-tarefas').innerHTML = dados.tarefas.map(t => `
+    <tr>
+      <td>${escapeHtml(t.titulo)}</td>
+      <td>${escapeHtml(t.status || '')}</td>
+      <td class="acoes">
+        <button class="btn-editar" onclick="abrirModalTarefa(${t.id})">Editar</button>
+        <button class="btn-excluir" onclick="excluirTarefa(${t.id})">Excluir</button>
+      </td>
+    </tr>
+  `).join('');
+
+  document.getElementById('tabela-leads').innerHTML = dados.leads.map(l => `
+    <tr>
+      <td>${escapeHtml(l.nome)}</td>
+      <td>${escapeHtml(l.etapa || '')}</td>
+      <td class="acoes">
+        <button class="btn-editar" onclick="abrirModalLead(${l.id})">Editar</button>
+        <button class="btn-excluir" onclick="excluirLead(${l.id})">Excluir</button>
+      </td>
+    </tr>
+  `).join('');
+
+  tarefasTrocarAba('tarefas');
+}
+
+function abrirModalTarefa(id) {
+  const reg = id ? ESTADO.tarefasCrm.tarefas.find(t => t.id === id) : null;
+  document.getElementById('modal-tarefa-titulo').textContent = reg ? 'Editar tarefa' : 'Nova tarefa';
+  document.getElementById('tarefa-id').value = reg ? reg.id : '';
+  document.getElementById('tarefa-titulo').value = reg ? reg.titulo : '';
+  montarToggle('toggle-status-tarefa', ESTADO.tarefasCrm.status_tarefa, reg ? reg.status : 'A fazer');
+  abrirModal('modal-tarefa');
+}
+
+async function salvarTarefa() {
+  const registro = {
+    id: document.getElementById('tarefa-id').value || null,
+    titulo: document.getElementById('tarefa-titulo').value.trim(),
+    status: valorToggle('toggle-status-tarefa'),
+  };
+  try {
+    await api('tarefas.php', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'salvar_tarefa', registro }),
+    });
+    fecharModal('modal-tarefa');
+    carregarTarefasCrm();
+  } catch (e) { alert(e.message); }
+}
+
+async function excluirTarefa(id) {
+  if (!confirm('Excluir esta tarefa?')) return;
+  await api('tarefas.php', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'excluir_tarefa', id }),
+  });
+  carregarTarefasCrm();
+}
+
+function abrirModalLead(id) {
+  const reg = id ? ESTADO.tarefasCrm.leads.find(l => l.id === id) : null;
+  document.getElementById('modal-lead-titulo').textContent = reg ? 'Editar lead' : 'Novo lead';
+  document.getElementById('lead-id').value = reg ? reg.id : '';
+  document.getElementById('lead-nome').value = reg ? reg.nome : '';
+  montarToggle('toggle-etapa-lead', ESTADO.tarefasCrm.etapas_crm, reg ? reg.etapa : 'Novo contato');
+  abrirModal('modal-lead');
+}
+
+async function salvarLead() {
+  const registro = {
+    id: document.getElementById('lead-id').value || null,
+    nome: document.getElementById('lead-nome').value.trim(),
+    etapa: valorToggle('toggle-etapa-lead'),
+  };
+  try {
+    await api('tarefas.php', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'salvar_lead', registro }),
+    });
+    fecharModal('modal-lead');
+    carregarTarefasCrm();
+  } catch (e) { alert(e.message); }
+}
+
+async function excluirLead(id) {
+  if (!confirm('Excluir este lead?')) return;
+  await api('tarefas.php', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'excluir_lead', id }),
+  });
+  carregarTarefasCrm();
+}
+
+// ---------- Util ----------
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+verificarSessao();
+</script>
+</body>
+</html>

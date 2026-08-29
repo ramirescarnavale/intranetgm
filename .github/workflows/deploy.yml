@@ -1,0 +1,45 @@
+name: Deploy para cPanel
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Publicar arquivos via API do cPanel (File Manager)
+        env:
+          CPANEL_HOST: ${{ secrets.CPANEL_HOST }}
+          CPANEL_USER: ${{ secrets.CPANEL_USER }}
+          CPANEL_API_TOKEN: ${{ secrets.CPANEL_API_TOKEN }}
+          # Caminho relativo à home do cPanel onde fica o site (subpasta advrc.com.br/intranetgm)
+          DESTINO_BASE: "public_html/intranetgm"
+        run: |
+          set -e
+          git ls-files public_html | while read -r arquivo; do
+            destino_rel="${DESTINO_BASE}/${arquivo#public_html/}"
+            dir=$(dirname "$destino_rel")
+            base=$(basename "$destino_rel")
+
+            echo "Publicando: $destino_rel"
+
+            resposta=$(curl -s -w "\n%{http_code}" \
+              -H "Authorization: cpanel ${CPANEL_USER}:${CPANEL_API_TOKEN}" \
+              --data-urlencode "dir=${dir}" \
+              --data-urlencode "file=${base}" \
+              --data-urlencode "content@${arquivo}" \
+              "https://${CPANEL_HOST}:2083/execute/Fileman/save_file_content")
+
+            codigo=$(echo "$resposta" | tail -n1)
+            corpo=$(echo "$resposta" | sed '$d')
+
+            if [ "$codigo" != "200" ]; then
+              echo "Falha ao publicar $destino_rel (HTTP $codigo)"
+              echo "$corpo"
+              exit 1
+            fi
+          done
