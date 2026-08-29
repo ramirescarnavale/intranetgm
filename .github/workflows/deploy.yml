@@ -34,26 +34,6 @@ jobs:
             echo "$1" | jq -r '.status // empty'
           }
 
-          # Cria as pastas de destino (mkdir não é recursivo, então cria nível a nível;
-          # "already exists" é o resultado esperado a partir da 2ª execução em diante).
-          git ls-files public_html | sed "s|^public_html|${DESTINO_BASE}|" | xargs -n1 dirname | sort -u | while read -r caminho; do
-            IFS='/' read -ra partes <<< "$caminho"
-            acumulado=""
-            for parte in "${partes[@]}"; do
-              pai="$acumulado"
-              acumulado="${acumulado:+$acumulado/}$parte"
-              echo "Garantindo pasta: $acumulado"
-              resposta=$(curl -s -S --connect-timeout 10 --max-time 30 \
-                -H "Authorization: cpanel ${CPANEL_USER}:${CPANEL_API_TOKEN}" \
-                --data-urlencode "path=/${pai}" --data-urlencode "name=${parte}" \
-                "https://${CPANEL_HOST}:2083/execute/Fileman/mkdir")
-              if [ "$(uapi_status "$resposta")" != "1" ] && ! echo "$resposta" | grep -qi "already exists"; then
-                echo "Falha ao criar pasta $acumulado: $resposta"
-                exit 1
-              fi
-            done
-          done
-
           git ls-files public_html | while read -r arquivo; do
             destino_rel="${DESTINO_BASE}/${arquivo#public_html/}"
             dir=$(dirname "$destino_rel")
