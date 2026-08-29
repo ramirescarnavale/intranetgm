@@ -45,6 +45,7 @@ jobs:
             resposta=$(curl -s -S --connect-timeout 10 --max-time 60 \
               -H "Authorization: cpanel ${CPANEL_USER}:${CPANEL_API_TOKEN}" \
               -F "dir=/${dir}" \
+              -F "overwrite=1" \
               -F "file-1=@${arquivo};filename=${base}" \
               "https://${CPANEL_HOST}:2083/execute/Fileman/upload_files")
 
