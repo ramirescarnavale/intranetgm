@@ -20,6 +20,14 @@ jobs:
           DESTINO_BASE: "public_html/intranetgm"
         run: |
           set -e
+
+          echo "Testando conectividade com ${CPANEL_HOST}:2083..."
+          curl -s -S -o /dev/null -w "HTTP %{http_code} (conectou em %{time_connect}s)\n" \
+            --connect-timeout 10 --max-time 20 \
+            -H "Authorization: cpanel ${CPANEL_USER}:${CPANEL_API_TOKEN}" \
+            "https://${CPANEL_HOST}:2083/execute/Fileman/get_file_information?dir=/&file=." \
+            || { echo "Não foi possível conectar em ${CPANEL_HOST}:2083 — verifique host, firewall ou se a API está habilitada."; exit 1; }
+
           git ls-files public_html | while read -r arquivo; do
             destino_rel="${DESTINO_BASE}/${arquivo#public_html/}"
             dir=$(dirname "$destino_rel")
@@ -27,7 +35,8 @@ jobs:
 
             echo "Publicando: $destino_rel"
 
-            resposta=$(curl -s -w "\n%{http_code}" \
+            resposta=$(curl -s -S -w "\n%{http_code}" \
+              --connect-timeout 10 --max-time 30 \
               -H "Authorization: cpanel ${CPANEL_USER}:${CPANEL_API_TOKEN}" \
               --data-urlencode "dir=${dir}" \
               --data-urlencode "file=${base}" \
