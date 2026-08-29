@@ -70,7 +70,7 @@ jobs:
 
             # save_file_content só edita arquivo existente; mkfile cria (erro "already exists" é esperado e ignorado).
             uapi --data-urlencode "path=/${dir}" --data-urlencode "name=${base}" \
-              "https://${CPANEL_HOST}:2083/execute/Fileman/mkfile" > /dev/null || true
+              "https://${CPANEL_HOST}:2083/execute/Fileman/mkfile" || true
 
             if ! uapi --data-urlencode "dir=/${dir}" \
                  --data-urlencode "file=${base}" \
