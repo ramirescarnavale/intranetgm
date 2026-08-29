@@ -28,26 +28,14 @@ jobs:
             "https://${CPANEL_HOST}:2083/execute/Fileman/get_file_information?dir=/&file=." \
             || { echo "Não foi possível conectar em ${CPANEL_HOST}:2083 — verifique host, firewall ou se a API está habilitada."; exit 1; }
 
-          uapi() {
-            # Chama a UAPI do cPanel e falha se status != 1, mesmo com HTTP 200
-            # (a UAPI pode responder 200 com um erro lógico no corpo JSON).
-            local resposta codigo corpo status
-            resposta=$(curl -s -S -w "\n%{http_code}" \
-              --connect-timeout 10 --max-time 30 \
-              -H "Authorization: cpanel ${CPANEL_USER}:${CPANEL_API_TOKEN}" \
-              "$@")
-            codigo=$(echo "$resposta" | tail -n1)
-            corpo=$(echo "$resposta" | sed '$d')
-            status=$(echo "$corpo" | jq -r '.status // empty')
-
-            if [ "$codigo" != "200" ] || [ "$status" != "1" ]; then
-              echo "$corpo"
-              return 1
-            fi
-            return 0
+          uapi_status() {
+            # Extrai o "status" do corpo JSON da UAPI (1 = sucesso, 0 = erro lógico,
+            # que pode vir junto de HTTP 200 — por isso não basta checar o código HTTP).
+            echo "$1" | jq -r '.status // empty'
           }
 
-          # Cria as pastas de destino (mkdir não é recursivo, então cria nível a nível).
+          # Cria as pastas de destino (mkdir não é recursivo, então cria nível a nível;
+          # "already exists" é o resultado esperado a partir da 2ª execução em diante).
           git ls-files public_html | sed "s|^public_html|${DESTINO_BASE}|" | xargs -n1 dirname | sort -u | while read -r caminho; do
             IFS='/' read -ra partes <<< "$caminho"
             acumulado=""
@@ -55,9 +43,14 @@ jobs:
               pai="$acumulado"
               acumulado="${acumulado:+$acumulado/}$parte"
               echo "Garantindo pasta: $acumulado"
-              uapi --data-urlencode "path=/${pai}" --data-urlencode "name=${parte}" \
-                "https://${CPANEL_HOST}:2083/execute/Fileman/mkdir" \
-                | grep -qi "already exists" && true || true
+              resposta=$(curl -s -S --connect-timeout 10 --max-time 30 \
+                -H "Authorization: cpanel ${CPANEL_USER}:${CPANEL_API_TOKEN}" \
+                --data-urlencode "path=/${pai}" --data-urlencode "name=${parte}" \
+                "https://${CPANEL_HOST}:2083/execute/Fileman/mkdir")
+              if [ "$(uapi_status "$resposta")" != "1" ] && ! echo "$resposta" | grep -qi "already exists"; then
+                echo "Falha ao criar pasta $acumulado: $resposta"
+                exit 1
+              fi
             done
           done
 
@@ -68,15 +61,15 @@ jobs:
 
             echo "Publicando: $destino_rel"
 
-            # save_file_content só edita arquivo existente; mkfile cria (erro "already exists" é esperado e ignorado).
-            uapi --data-urlencode "path=/${dir}" --data-urlencode "name=${base}" \
-              "https://${CPANEL_HOST}:2083/execute/Fileman/mkfile" || true
+            # upload_files cria OU sobrescreve — é o único método da UAPI que cria arquivo novo.
+            resposta=$(curl -s -S --connect-timeout 10 --max-time 60 \
+              -H "Authorization: cpanel ${CPANEL_USER}:${CPANEL_API_TOKEN}" \
+              -F "dir=/${dir}" \
+              -F "file-1=@${arquivo};filename=${base}" \
+              "https://${CPANEL_HOST}:2083/execute/Fileman/upload_files")
 
-            if ! uapi --data-urlencode "dir=/${dir}" \
-                 --data-urlencode "file=${base}" \
-                 --data-urlencode "content@${arquivo}" \
-                 "https://${CPANEL_HOST}:2083/execute/Fileman/save_file_content"; then
-              echo "Falha ao publicar $destino_rel"
+            if [ "$(uapi_status "$resposta")" != "1" ]; then
+              echo "Falha ao publicar $destino_rel: $resposta"
               exit 1
             fi
           done
