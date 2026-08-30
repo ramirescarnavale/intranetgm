@@ -16,7 +16,9 @@ session_start();
 function auth_carregar_usuarios(): array
 {
     // Fora do repositório git e da pasta pública — ver secrets/secrets.php.
-    $caminho = __DIR__ . '/../../secrets/secrets.php';
+    // No cPanel, fica em ~/intranetgm_secrets/secrets.php (irmã de public_html,
+    // 3 níveis acima de api/: api -> intranetgm -> public_html -> home).
+    $caminho = __DIR__ . '/../../../intranetgm_secrets/secrets.php';
     if (!file_exists($caminho)) {
         http_response_code(500);
         echo json_encode(['erro' => 'Arquivo de credenciais não encontrado.']);
