@@ -20,5 +20,6 @@ foreach ($candidatos as $c) {
 
 echo json_encode([
     'este_arquivo_esta_em' => __DIR__,
+    'open_basedir' => ini_get('open_basedir'),
     'candidatos' => $resultado,
 ], JSON_PRETTY_PRINT);
